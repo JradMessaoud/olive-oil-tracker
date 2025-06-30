@@ -1,0 +1,31 @@
+# Fichiers de configuration sensibles
+.env
+
+# Répertoires de l'environnement virtuel
+venv/
+.venv/
+env/
+.env
+
+# Fichiers de cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Fichiers de base de données
+*.db
+*.sqlite3
+
+# Fichiers de données volumineux ou brutes (optionnel, mais recommandé)
+*.csv
+*.xlsx
+!olive_oil_data.csv 
+
+# Fichiers de l'IDE
+.vscode/
+.idea/
+
+# Fichiers de l'IDE
+.vscode/
+.idea/ 

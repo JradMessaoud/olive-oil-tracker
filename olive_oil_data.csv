@@ -1,0 +1,16 @@
+country,year,type,sales,volume,price
+Spain,2020,Extra Virgin,125000.50,25000,5.00
+Italy,2020,Extra Virgin,98000.25,19600,5.00
+Tunisia,2020,Pure,45000.00,9000,5.00
+Greece,2020,Organic,75000.75,15000,5.01
+Spain,2021,Extra Virgin,135000.00,27000,5.00
+Italy,2021,Extra Virgin,105000.50,21000,5.02
+Tunisia,2021,Pure,52000.25,10400,5.01
+Greece,2021,Organic,82000.00,16400,5.00
+Portugal,2021,Extra Virgin,68000.75,13600,5.00
+Spain,2022,Extra Virgin,145000.25,29000,5.00
+Italy,2022,Extra Virgin,112000.00,22400,5.00
+Tunisia,2022,Pure,58000.50,11600,5.00
+Greece,2022,Organic,89000.75,17800,5.00
+Portugal,2022,Extra Virgin,72000.00,14400,5.00
+Morocco,2022,Pure,35000.25,7000,5.00 
