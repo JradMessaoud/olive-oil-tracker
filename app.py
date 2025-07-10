@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import google.generativeai as genai
-from dotenv import load_dotenv
-import os
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
@@ -21,13 +19,105 @@ st.set_page_config(
     page_icon="🫒"
 )
 
-# Chargement des variables d'environnement
-load_dotenv()
+class AIAgent:
+    """Agent IA pour l'analyse des données d'huile d'olive"""
+    
+    def __init__(self):
+        """Initialise l'agent IA avec le contexte tunisien"""
+        # Récupérer la clé API depuis les secrets Streamlit (sécurisé)
+        self.api_key = st.secrets.get("GEMINI_API_KEY")
+        
+        # Afficher le statut de l'API dans la sidebar
+        if self.api_key:
+            st.sidebar.success("🤖 IA Gemini : ✅ Configurée")
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.is_available = True
+        else:
+            st.sidebar.warning("🤖 IA Gemini : ❌ Non configurée")
+            self.is_available = False
+            self.model = None
+    
+    def generate_summary(self, filtered_data):
+        """Génère un résumé IA des données"""
+        if not self.is_available:
+            return "💡 Fonctionnalité IA non disponible : Gemini n'est pas configuré."
+        
+        try:
+            # Préparer les données pour le prompt
+            total_sales = filtered_data['sales'].sum()
+            total_volume = filtered_data['volume'].sum()
+            avg_price = filtered_data['price'].mean()
+            countries = filtered_data['country'].unique()
+            years = filtered_data['year'].unique()
+            
+            prompt = f"""
+            Analyse les données de ventes d'huile d'olive suivantes et génère un résumé concis en français :
+            
+            - Ventes totales : {total_sales:,.2f} EUR
+            - Volume total : {total_volume:,.0f} litres
+            - Prix moyen : {avg_price:.2f} EUR/litre
+            - Pays : {', '.join(countries)}
+            - Années : {', '.join(map(str, years))}
+            
+            Fournis une brève analyse des tendances de ventes et des insights clés.
+            """
+            
+            response = self.model.generate_content(prompt)
+            return response.text
+            
+        except Exception as e:
+            # Gestion d'erreur sécurisée
+            error_msg = str(e)
+            safe_error = error_msg.encode('ascii', 'ignore').decode('ascii')
+            return f"❌ Erreur lors de la génération du résumé IA : {safe_error}\n\n{self.generate_manual_summary(filtered_data)}"
+    
+    def generate_manual_summary(self, filtered_data):
+        """Génère un résumé manuel quand l'IA n'est pas disponible"""
+        total_sales = filtered_data['sales'].sum()
+        total_volume = filtered_data['volume'].sum()
+        avg_price = filtered_data['price'].mean()
+        countries = filtered_data['country'].unique()
+        years = filtered_data['year'].unique()
+        
+        # Trouver le pays le plus performant
+        sales_by_country = filtered_data.groupby('country')['sales'].sum()
+        top_country = sales_by_country.idxmax()
+        top_sales = sales_by_country.max()
+        
+        # Trouver la tendance des ventes
+        sales_by_year = filtered_data.groupby('year')['sales'].sum()
+        if len(sales_by_year) > 1:
+            trend = "croissant" if sales_by_year.iloc[-1] > sales_by_year.iloc[0] else "décroissant"
+        else:
+            trend = "stable"
+        
+        summary = f"""
+        📊 **Résumé des ventes d'huile d'olive**
+        
+        **Données générales :**
+        - Total des ventes : {total_sales:,.2f} EUR
+        - Volume total : {total_volume:,.0f} litres
+        - Prix moyen : {avg_price:.2f} EUR/litre
+        
+        **Répartition géographique :**
+        - Pays inclus : {', '.join(countries)}
+        - Meilleur performeur : {top_country} ({top_sales:,.2f} EUR)
+        
+        **Évolution temporelle :**
+        - Période : {min(years)} - {max(years)}
+        - Tendance : {trend}
+        
+        **Insights :**
+        - {len(filtered_data)} enregistrements analysés
+        - Prix moyen stable autour de {avg_price:.2f} EUR/litre
+        - Diversité géographique avec {len(countries)} pays
+        """
+        
+        return summary
 
-# Configuration Gemini
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-if gemini_api_key:
-    genai.configure(api_key=gemini_api_key)
+# Initialiser l'agent IA
+ai_agent = AIAgent()
 
 # Initialize database and load data
 @st.cache_data
@@ -59,86 +149,11 @@ def load_data():
 
 def generate_ai_summary(filtered_data):
     """Generate AI summary using Gemini"""
-    if not gemini_api_key:
-        return "💡 AI feature not available: Gemini is not configured."
-    try:
-        # Prepare data for prompt
-        total_sales = filtered_data['sales'].sum()
-        total_volume = filtered_data['volume'].sum()
-        avg_price = filtered_data['price'].mean()
-        countries = filtered_data['country'].unique()
-        years = filtered_data['year'].unique()
-        
-        prompt = f"""
-        Analyze the following olive oil sales data and generate a concise summary in French:
-        
-        - Total sales: {total_sales:,.2f} EUR
-        - Total volume: {total_volume:,.0f} liters
-        - Average price: {avg_price:.2f} EUR/liter
-        - Countries: {', '.join(countries)}
-        - Years: {', '.join(map(str, years))}
-        
-        Please provide a brief analysis of the sales trends and key insights.
-        """
-        
-        # Use gemini-1.5-flash which is confirmed to work
-        try:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            response = model.generate_content(prompt)
-            return response.text
-        except Exception as ai_error:
-            # If AI fails, fallback to manual summary
-            return f"🤖 AI temporarily unavailable. Here's a manual analysis:\n\n{generate_manual_summary(filtered_data)}"
-        
-    except Exception as e:
-        # Handle encoding errors safely
-        error_msg = str(e)
-        safe_error = error_msg.encode('ascii', 'ignore').decode('ascii')
-        return f"❌ Error generating AI summary: {safe_error}\n\n{generate_manual_summary(filtered_data)}"
+    return ai_agent.generate_summary(filtered_data)
 
 def generate_manual_summary(filtered_data):
     """Generate a manual summary when AI is not available"""
-    total_sales = filtered_data['sales'].sum()
-    total_volume = filtered_data['volume'].sum()
-    avg_price = filtered_data['price'].mean()
-    countries = filtered_data['country'].unique()
-    years = filtered_data['year'].unique()
-    
-    # Find top performing country
-    sales_by_country = filtered_data.groupby('country')['sales'].sum()
-    top_country = sales_by_country.idxmax()
-    top_sales = sales_by_country.max()
-    
-    # Find sales trend
-    sales_by_year = filtered_data.groupby('year')['sales'].sum()
-    if len(sales_by_year) > 1:
-        trend = "croissant" if sales_by_year.iloc[-1] > sales_by_year.iloc[0] else "décroissant"
-    else:
-        trend = "stable"
-    
-    summary = f"""
-    📊 **Résumé des ventes d'huile d'olive**
-    
-    **Données générales :**
-    - Total des ventes : {total_sales:,.2f} EUR
-    - Volume total : {total_volume:,.0f} litres
-    - Prix moyen : {avg_price:.2f} EUR/litre
-    
-    **Répartition géographique :**
-    - Pays inclus : {', '.join(countries)}
-    - Meilleur performeur : {top_country} ({top_sales:,.2f} EUR)
-    
-    **Évolution temporelle :**
-    - Période : {min(years)} - {max(years)}
-    - Tendance : {trend}
-    
-    **Insights :**
-    - {len(filtered_data)} enregistrements analysés
-    - Prix moyen stable autour de {avg_price:.2f} EUR/litre
-    - Diversité géographique avec {len(countries)} pays
-    """
-    
-    return summary
+    return ai_agent.generate_manual_summary(filtered_data)
 
 def export_data(df, format_type):
     """Export data in different formats"""
@@ -530,7 +545,7 @@ def main():
             st.subheader("🔧 Configuration")
             st.info("Configuration actuelle:")
             st.markdown(f"- **Base de données:** {db.db_path}")
-            st.markdown(f"- **API Gemini:** {'✅ Configurée' if gemini_api_key else '❌ Non configurée'}")
+            st.markdown(f"- **API Gemini:** {'✅ Configurée' if ai_agent.api_key else '❌ Non configurée'}")
             st.markdown(f"- **Enregistrements:** {len(df)}")
         
         with col2:
