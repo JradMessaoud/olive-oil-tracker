@@ -1,5 +1,8 @@
 # 🫒 Olive Oil Tracker Pro
 
+https://olive-oil-tracker.streamlit.app/
+
+
 ## 🚀 **Dashboard ultra-avancé pour le suivi des ventes d'huile d'olive**
 
 Une application Streamlit complète avec **IA intégrée**, **base de données SQLite**, **analyses prédictives**, **visualisations 3D** et **gestion avancée des données**.
